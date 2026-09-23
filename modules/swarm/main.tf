@@ -1,5 +1,5 @@
 # GCE + Docker Swarm. 1 manager + var.node_count workers.
-# v6.13.16 — provisionne le substrat Swarm (co-primaire avec K8s).
+# v6.13.18 — provisionne le substrat Swarm (co-primaire avec K8s).
 #
 # Note bootstrap : le startup-script installe Docker et init le Swarm sur le
 # manager. Le JOIN des workers nécessite le token du manager (récupéré post-apply
@@ -33,20 +33,44 @@ resource "google_compute_subnetwork" "subnet" {
   ip_cidr_range = "10.30.0.0/20"
 }
 
-# Firewall : SSH + HTTP/S + ports Swarm (2377/tcp, 7946/tcp+udp, 4789/udp).
-resource "google_compute_firewall" "swarm" {
-  name    = "${local.name}-fw"
+# Firewall public limité aux entrées web.
+resource "google_compute_firewall" "public_web" {
+  name    = "${local.name}-public-web-fw"
   network = google_compute_network.vpc.id
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "80", "443", "2377", "7946"]
+    ports    = ["80", "443"]
+  }
+  source_ranges = ["0.0.0.0/0"]
+}
+
+# Plan de contrôle Swarm limité au subnet privé des nœuds.
+resource "google_compute_firewall" "swarm_internal" {
+  name    = "${local.name}-internal-fw"
+  network = google_compute_network.vpc.id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["2377", "7946"]
   }
   allow {
     protocol = "udp"
     ports    = ["7946", "4789"]
   }
-  source_ranges = ["0.0.0.0/0"]
+  source_ranges = ["10.30.0.0/20"]
+}
+
+resource "google_compute_firewall" "ssh" {
+  count   = length(var.ssh_allowed_cidrs) > 0 ? 1 : 0
+  name    = "${local.name}-ssh-fw"
+  network = google_compute_network.vpc.id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+  source_ranges = var.ssh_allowed_cidrs
 }
 
 resource "google_compute_instance" "manager" {
