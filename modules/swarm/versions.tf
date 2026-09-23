@@ -1,4 +1,4 @@
-# GCP — substrat Swarm (GCE + Docker Swarm). v6.13.18 (dual-substrate, co-primaire).
+# GCP — substrat Swarm (GCE + Docker Swarm). v6.14.1 (dual-substrate, co-primaire).
 terraform {
   required_version = ">= 1.5"
   required_providers {

@@ -1,4 +1,4 @@
-# Contrat de variables NORMALISÉ v6.13.18 (identique k8s ↔ swarm, tous clouds).
+# Contrat de variables NORMALISÉ v6.14.1 (identique k8s ↔ swarm, tous clouds).
 variable "org_id" {
   type = string
 }
@@ -45,7 +45,7 @@ variable "image_registry" {
 
 variable "image_tag" {
   type    = string
-  default = "v6.13.18"
+  default = "v6.14.1"
 }
 
 variable "domain" {

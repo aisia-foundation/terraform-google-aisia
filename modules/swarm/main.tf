@@ -1,5 +1,5 @@
 # GCE + Docker Swarm. 1 manager + var.node_count workers.
-# v6.13.18 — provisionne le substrat Swarm (co-primaire avec K8s).
+# v6.14.1 — provisionne le substrat Swarm (co-primaire avec K8s).
 #
 # Note bootstrap : le startup-script installe Docker et init le Swarm sur le
 # manager. Le JOIN des workers nécessite le token du manager (récupéré post-apply
