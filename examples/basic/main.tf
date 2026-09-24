@@ -28,8 +28,7 @@ provider "google" {
 ###############################################################################
 module "aisia_google_k8s" {
   # Registre HCP privé (nécessite credentials) :
-  #   source  = "app.terraform.io/AISIA/aisia/google"
-  #   version = "~> 1.0"
+  #   source = "git::https://github.com/aisia-foundation/terraform-google-aisia.git?ref=v6.14.1"
   source = "../../"
 
   org_id      = "acme"
@@ -49,7 +48,7 @@ module "aisia_google_k8s" {
 # 1. gcloud container clusters get-credentials aisia-acme \
 #      --region europe-west1 --project my-gcp-project
 # 2. provider "kubernetes" { config_path = "~/.kube/config" }
-# 3. module "aisia_app" { source = "app.terraform.io/AISIA/aisia-cluster/kubernetes" ... }
+# 3. module "aisia_app" { source = "aisia-foundation/cluster/aisia" version = "6.14.1" ... }
 ###############################################################################
 
 output "kubeconfig_command" {

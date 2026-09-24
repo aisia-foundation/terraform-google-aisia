@@ -66,9 +66,10 @@ provider "google" {
 }
 
 # L1 — substrat GKE
+# Pas de workspace TFE : le code est le dépôt Git. Le registre public
+# n'a pas encore la fiche aisia-foundation/aisia/google.
 module "aisia_gcp" {
-  source  = "app.terraform.io/AISIA/aisia/google"
-  version = "~> 1.0"
+  source = "git::https://github.com/aisia-foundation/terraform-google-aisia.git?ref=v6.14.1"
 
   org_id      = "acme"
   service_key = "C1"
@@ -87,8 +88,8 @@ provider "kubernetes" {
 
 # L2 — déploiement AISIA
 module "aisia_app" {
-  source  = "app.terraform.io/AISIA/aisia-cluster/kubernetes"
-  version = "~> 1.0"
+  source  = "aisia-foundation/cluster/aisia"
+  version = "6.14.1"
 
   image_tag = "v6.14.1"
   tier      = "saas"
@@ -143,7 +144,7 @@ module "aisia_app" {
 - Provider `hashicorp/google >= 5.0, < 7.0`
 - Credentials GCP via `GOOGLE_CREDENTIALS` ou `GOOGLE_APPLICATION_CREDENTIALS`, et un projet cible
   (`project_id`) avec les APIs `container`, `compute`, `sqladmin`, `redis` activées
-- Module `terraform-aisia-cluster ~> 1.0` pour déployer l'application
+- Module `aisia-foundation/cluster/aisia` 6.14.1 pour déployer l'application
 
 ## Validation sans creds (docs-driven)
 
