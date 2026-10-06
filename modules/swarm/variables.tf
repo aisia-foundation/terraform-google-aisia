@@ -45,7 +45,7 @@ variable "image_registry" {
 
 variable "image_tag" {
   type    = string
-  default = "v6.14.10"
+  default = "v6.14.11"
 }
 
 variable "domain" {
