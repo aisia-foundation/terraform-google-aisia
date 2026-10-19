@@ -33,7 +33,7 @@ module "aisia_google_k8s" {
 
   org_id      = "acme"
   service_key = "C1"
-  image_tag   = "v6.14.16"
+  image_tag   = "v6.14.17"
   tier        = "saas"
 
   project_id   = "my-gcp-project"
