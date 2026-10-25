@@ -55,9 +55,9 @@ variable "image_registry" {
 }
 
 variable "image_tag" {
-  description = "Tag d'image AISIA à déployer (ex. v6.14.19)."
+  description = "Tag d'image AISIA à déployer (ex. v6.14.20)."
   type        = string
-  default     = "v6.14.19"
+  default     = "v6.14.20"
 }
 
 variable "domain" {
@@ -128,4 +128,19 @@ variable "with_managed_cache" {
   description = "Provisionner Memorystore Redis (briques data/ops)."
   type        = bool
   default     = false
+}
+
+variable "master_authorized_networks" {
+  description = "Plages autorisées sur l'API Kubernetes GKE (IP d'administration, runner CI). Liste vide = aucune source externe ; 0.0.0.0/0 refusé."
+  type = list(object({
+    cidr_block   = string
+    display_name = string
+  }))
+  default = []
+  validation {
+    condition = alltrue([
+      for n in var.master_authorized_networks : can(cidrhost(n.cidr_block, 0)) && !endswith(n.cidr_block, "/0")
+    ])
+    error_message = "master_authorized_networks : CIDR valides uniquement, jamais 0.0.0.0/0."
+  }
 }

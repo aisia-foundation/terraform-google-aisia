@@ -33,13 +33,19 @@ module "aisia_google_k8s" {
 
   org_id      = "acme"
   service_key = "C1"
-  image_tag   = "v6.14.19"
+  image_tag   = "v6.14.20"
   tier        = "saas"
 
   project_id   = "my-gcp-project"
   region       = "europe-west1"
   cluster_name = "aisia-acme"
   node_count   = 1
+
+  # API Kubernetes fermée par défaut (aucune source externe). Autoriser le
+  # poste d'administration ou le runner qui exécute le L2 :
+  # master_authorized_networks = [
+  #   { cidr_block = "203.0.113.10/32", display_name = "admin" },
+  # ]
 }
 
 ###############################################################################

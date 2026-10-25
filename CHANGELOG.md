@@ -2,6 +2,24 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/) · Versioning : SemVer.
 
+## [Unreleased] — durcissement IaC (2026-10-23)
+
+Corrige les constats trivy HIGH/CRITICAL. Publication par le train de release.
+
+### Security
+- GKE : master authorized networks, Workload Identity, pools en
+  `GKE_METADATA`, shielded nodes explicites.
+- `modules/swarm` : workers sans IP publique (sortie Cloud NAT).
+
+### Added
+- Variables `master_authorized_networks` (racine), `manager_public_ip`,
+  `worker_public_ip` (`modules/swarm`) ; sortie `manager_private_ip`.
+
+### Changed — à lire avant la mise à niveau
+- L'API GKE n'accepte plus que les plages déclarées (défaut : aucune externe).
+- `worker_ips` renvoie les IP privées quand `worker_public_ip = false` (défaut).
+- Un routeur et un Cloud NAT sont créés quand un nœud n'a pas d'IP publique.
+
 ## [6.14.1] — 2026-09-24
 
 ### Alignement de version — aucun changement fonctionnel

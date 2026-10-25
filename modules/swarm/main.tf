@@ -73,6 +73,28 @@ resource "google_compute_firewall" "ssh" {
   source_ranges = var.ssh_allowed_cidrs
 }
 
+# Sortie Internet des nœuds sans IP publique (installation Docker, images).
+resource "google_compute_router" "nat" {
+  count   = var.worker_public_ip && var.manager_public_ip ? 0 : 1
+  name    = "${local.name}-router"
+  region  = var.region
+  network = google_compute_network.vpc.id
+}
+
+resource "google_compute_router_nat" "nat" {
+  count                              = var.worker_public_ip && var.manager_public_ip ? 0 : 1
+  name                               = "${local.name}-nat"
+  router                             = google_compute_router.nat[0].name
+  region                             = var.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+}
+
 resource "google_compute_instance" "manager" {
   name         = "${local.name}-mgr"
   machine_type = var.instance_flavor
@@ -88,12 +110,20 @@ resource "google_compute_instance" "manager" {
   network_interface {
     network    = google_compute_network.vpc.id
     subnetwork = google_compute_subnetwork.subnet.id
-    access_config {}
+
+    # Le manager porte l'entrée web Traefik (80/443) : IP publique par défaut.
+    # Durcir avec manager_public_ip = false derrière un load balancer ou un VPN.
+    dynamic "access_config" {
+      for_each = var.manager_public_ip ? [1] : []
+      content {}
+    }
   }
   metadata = {
     ssh-keys       = var.ssh_public_key != "" ? "${var.ssh_user}:${var.ssh_public_key}" : null
     startup-script = "${local.docker_install}\ndocker swarm init || true\n"
   }
+
+  depends_on = [google_compute_router_nat.nat]
 }
 
 resource "google_compute_instance" "worker" {
@@ -112,10 +142,17 @@ resource "google_compute_instance" "worker" {
   network_interface {
     network    = google_compute_network.vpc.id
     subnetwork = google_compute_subnetwork.subnet.id
-    access_config {}
+
+    # Workers privés par défaut (sortie via Cloud NAT) ; opt-in worker_public_ip.
+    dynamic "access_config" {
+      for_each = var.worker_public_ip ? [1] : []
+      content {}
+    }
   }
   metadata = {
     ssh-keys       = var.ssh_public_key != "" ? "${var.ssh_user}:${var.ssh_public_key}" : null
     startup-script = local.docker_install
   }
+
+  depends_on = [google_compute_router_nat.nat]
 }

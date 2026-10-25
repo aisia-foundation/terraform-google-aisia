@@ -72,6 +72,28 @@ resource "google_container_cluster" "gke" {
   release_channel {
     channel = var.release_channel
   }
+
+  # API Kubernetes fermée par défaut : seules les plages listées dans
+  # `master_authorized_networks` (IP d'administration, runner CI) y accèdent.
+  # Liste vide = aucune source externe autorisée (accès depuis le VPC/Google).
+  master_authorized_networks_config {
+    dynamic "cidr_blocks" {
+      for_each = var.master_authorized_networks
+      content {
+        cidr_block   = cidr_blocks.value.cidr_block
+        display_name = cidr_blocks.value.display_name
+      }
+    }
+  }
+
+  # Workload Identity : prérequis du mode GKE_METADATA des pools (les pods
+  # n'héritent plus du compte de service du nœud via le serveur de métadonnées).
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  enable_shielded_nodes = true
+
   resource_labels = local.labels
 }
 
@@ -89,6 +111,11 @@ resource "google_container_node_pool" "primary" {
     disk_size_gb = 50
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     labels       = local.labels
+
+    # Métadonnées du nœud masquées aux pods (Workload Identity).
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
   }
   management {
     auto_repair  = true
@@ -115,6 +142,12 @@ resource "google_container_node_pool" "gpu" {
       count = 1
     }
     labels = merge(local.labels, { aisia_pool = "gpu" })
+
+    # Métadonnées du nœud masquées aux pods (Workload Identity).
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+
     taint {
       key    = "nvidia.com/gpu"
       value  = "present"

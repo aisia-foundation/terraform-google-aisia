@@ -45,7 +45,7 @@ variable "image_registry" {
 
 variable "image_tag" {
   type    = string
-  default = "v6.14.19"
+  default = "v6.14.20"
 }
 
 variable "domain" {
@@ -96,4 +96,16 @@ variable "ssh_allowed_cidrs" {
     ])
     error_message = "ssh_allowed_cidrs ne peut contenir 0.0.0.0/0 et chaque valeur doit être un CIDR valide. Une liste vide désactive SSH."
   }
+}
+
+variable "manager_public_ip" {
+  description = "Attribue une IP publique au manager (point d'entrée Traefik 80/443). Vrai par défaut ; faux si l'entrée passe par un load balancer ou un VPN (sortie via Cloud NAT)."
+  type        = bool
+  default     = true
+}
+
+variable "worker_public_ip" {
+  description = "Attribue une IP publique à chaque worker. Faux par défaut : les workers sortent par Cloud NAT et ne sont joignables que depuis le VPC."
+  type        = bool
+  default     = false
 }

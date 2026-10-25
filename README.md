@@ -8,7 +8,7 @@
 
 # terraform-google-aisia
 
-> **v6.14.18** · code **v6.14.19** (worktree candidat non tagué), registry/images LIVE encore **v6.14.18** — module registry — bootstrap GCP + substrat AISIA
+> **v6.14.19** · code **v6.14.20** (worktree candidat non tagué), registry/images LIVE encore **v6.14.19** — module registry — bootstrap GCP + substrat AISIA
 
 ## Cœur d'AISIA (identité produit)
 
@@ -23,9 +23,9 @@ puis cloud si nécessaire — via `BanditRouter`, pas un simple reverse-proxy.
 |--------------|-------|
 | 1 provider fixe | **167** moteurs IA |
 | Catalogue modèles | **9568** modèles |
-| Modèles locaux actifs | **63** / 135 catalogués |
+| Modèles locaux actifs | **63** / 168 catalogués |
 | Stateless | Qdrant + audit AI Act + multi-tenant |
-| SaaS opaque | Déployable Swarm/K8s — runtime **v6.14.18** · code **v6.14.19** |
+| SaaS opaque | Déployable Swarm/K8s — runtime **v6.14.19** · code **v6.14.20** |
 
 Documentation : [README racine](../../../../README.md) ·
 [Product Identity](../../../../specification/03-Project-State/Product-Identity-AISIA.md)
@@ -73,12 +73,17 @@ module "aisia_gcp" {
 
   org_id      = "acme"
   service_key = "C1"
-  image_tag   = "v6.14.19"
+  image_tag   = "v6.14.20"
   tier        = "saas"
 
   project_id = "my-gcp-project"
   region     = "europe-west1"
   node_count = 2
+
+  # API fermée par défaut : autoriser le poste ou le runner qui exécute le L2.
+  master_authorized_networks = [
+    { cidr_block = "203.0.113.10/32", display_name = "admin" },
+  ]
 }
 
 # Récupérer le kubeconfig (voir output kubeconfig_command), puis :
@@ -91,7 +96,7 @@ module "aisia_app" {
   source  = "aisia-foundation/cluster/aisia"
   version = "6.14.1"
 
-  image_tag = "v6.14.19"
+  image_tag = "v6.14.20"
   tier      = "saas"
   domain    = "acme.aisia.fr"
 }
@@ -110,7 +115,7 @@ module "aisia_app" {
 | `node_count` | Nombre de nœuds du pool principal GKE | `number` | `1` | non |
 | `instance_flavor` | Machine type GCE des nœuds principaux | `string` | `"e2-standard-4"` | non |
 | `image_registry` | Registry des images AISIA | `string` | `"registry.aisia.fr"` | non |
-| `image_tag` | Tag d'image AISIA à déployer | `string` | `"v6.14.19"` | non |
+| `image_tag` | Tag d'image AISIA à déployer | `string` | `"v6.14.20"` | non |
 | `domain` | Domaine custom (vide = *.aisia.fr) | `string` | `""` | non |
 | `tier` | Offre tarifaire (saas \| baas \| paas) | `string` | `"saas"` | non |
 | `gpu_enabled` | Provisionner un pool GPU GKE | `bool` | `false` | non |
@@ -121,6 +126,7 @@ module "aisia_app" {
 | `gpu_node_flavor` | Machine type des nœuds GPU (g2-standard-8 = 1× L4) | `string` | `"g2-standard-8"` | non |
 | `with_managed_db` | Provisionner Cloud SQL Postgres | `bool` | `false` | non |
 | `with_managed_cache` | Provisionner Memorystore Redis | `bool` | `false` | non |
+| `master_authorized_networks` | Plages autorisées sur l'API GKE (`0.0.0.0/0` refusé) ; vide = aucune source externe | `list(object({cidr_block=string, display_name=string}))` | `[]` | non |
 
 ## Outputs
 
@@ -158,6 +164,27 @@ terraform validate
 L'`apply`/`destroy` réel est **gardé par la présence de credentials** (invariant HONEST-FAILURE) :
 sans elles, aucune ressource GCP n'est créée.
 
+## Sécurité par défaut
+
+- **Master authorized networks** actif : l'API Kubernetes n'accepte que les
+  plages de `master_authorized_networks` (vide = aucune source externe).
+- **Workload Identity** (`<project_id>.svc.id.goog`) et pools en mode
+  `GKE_METADATA` : les pods ne lisent plus les identifiants du compte de service
+  du nœud. Un pod qui accède à GCP doit passer par un compte de service
+  Kubernetes lié à un compte de service Google.
+- **Shielded nodes** explicitement activés.
+- Sous-module `modules/swarm` : **workers sans IP publique** par défaut
+  (`worker_public_ip = false`), sortie par Cloud NAT créé par le module ; le
+  manager garde son IP publique (`manager_public_ip = true`, entrée Traefik
+  80/443 ; `false` derrière un load balancer ou un VPN). SSH vers un
+  worker privé : rebond par le manager (`manager_private_ip`) ou IAP.
+
+> **Mise à niveau d'un déploiement existant** — les pods qui utilisaient le
+> compte de service du nœud perdent cet accès (Workload Identity requis). Sur
+> le substrat Swarm, les workers perdent leur IP publique et `worker_ips`
+> renvoie leurs IP privées ; fixer `worker_public_ip = true` pour l'ancien
+> comportement. Cloud NAT est facturé par GCP.
+
 ## Licence
 
 [Mozilla Public License 2.0](LICENSE) — Copyright (c) 2026 AISIA (Sébastien Lambert).
@@ -177,7 +204,7 @@ sans elles, aucune ressource GCP n'est créée.
 | `node_count` | `number` | `1` | Nombre de nœuds du pool principal GKE. |
 | `instance_flavor` | `string` | `"e2-standard-4"` | Machine type GCE des nœuds du pool principal (ex : e2-standard-4). |
 | `image_registry` | `string` | `"registry.aisia.fr"` | Registry des images AISIA (app déployée via terraform-aisia-cluster). |
-| `image_tag` | `string` | `"v6.14.19"` | Tag d'image AISIA à déployer (ex. v6.14.19). |
+| `image_tag` | `string` | `"v6.14.20"` | Tag d'image AISIA à déployer (ex. v6.14.20). |
 | `domain` | `string` | `""` | Domaine custom de l'org (vide = *.aisia.fr). |
 | `tier` | `string` | `"saas"` | Offre tarifaire AISIA (saas | baas | paas). |
 | `gpu_enabled` | `bool` | `false` | Provisionner un pool GPU GKE (runtime compute-gpu / inférence C4). |
@@ -189,6 +216,7 @@ sans elles, aucune ressource GCP n'est créée.
 | `gpu_node_flavor` | `string` | `"g2-standard-8"` | Machine type des nœuds du pool GPU optionnel (g2-standard-8 = 1× L4). |
 | `with_managed_db` | `bool` | `false` | Provisionner Cloud SQL Postgres (briques data). |
 | `with_managed_cache` | `bool` | `false` | Provisionner Memorystore Redis (briques data/ops). |
+| `master_authorized_networks` | `list(object({` | `[]` | Plages autorisées sur l'API Kubernetes GKE (IP d'administration, runner CI). Liste vide = aucune source externe ; 0.0.0.0/0 refusé. |
 
 ### Outputs (parité `outputs.tf`)
 
@@ -214,24 +242,24 @@ sans elles, aucune ressource GCP n'est créée.
 - **Référence API** : [api.aisia.fr/docs](https://api.aisia.fr/docs)
 - **Provider Terraform** : [aisia-foundation/aisia](https://registry.terraform.io/providers/aisia-foundation/aisia/latest/docs)
 - **Guide d'implémentation** : [getting-started](https://registry.terraform.io/providers/aisia-foundation/aisia/latest/docs/guides/getting-started)
-- **Version module / code** : **v6.14.19**
-- **PROD LIVE documentaire** : **v6.14.18** (runtime cluster ; distinct du tag module)
+- **Version module / code** : **v6.14.20**
+- **PROD LIVE documentaire** : **v6.14.19** (runtime cluster ; distinct du tag module)
 
 <!-- TF-REGISTRY-STATUS -->
 ## Statut publication registry (honnête)
 
-> Mesuré à la régénération docs · **version code TF** **v6.14.19** (`VERSION` modules + provider) · PROD LIVE documentaire **v6.14.18**.
+> Mesuré à la régénération docs · **version code TF** **v6.14.20** (`VERSION` modules + provider) · PROD LIVE documentaire **v6.14.19**.
 
 | Artefact | Repo | Public registry.terraform.io |
 |----------|------|------------------------------|
-| Provider `aisia-foundation/aisia` | `6.14.19` | **6.14.17** ❌ écart |
-| Module `terraform-aisia-cluster` (`cluster/aisia`) | `6.14.19` | **6.14.18** ❌ écart |
-| Module `terraform-aisia-swarm` (`swarm/aisia`) | `6.14.19` | **6.14.18** ❌ écart |
-| Module `terraform-aws-aisia` (`aisia/aws`) | `6.14.19` | **6.14.18** ❌ écart |
-| Module `terraform-azure-aisia` (`aisia/azure`) | `6.14.19` | **6.14.18** ❌ écart |
-| Module `terraform-google-aisia` (`aisia/google`) | `6.14.19` | **6.14.18** ❌ écart |
-| Module `terraform-ovh-aisia` (`aisia/ovh`) | `6.14.19` | **6.14.18** ❌ écart |
-| Module `terraform-scaleway-aisia` (`aisia/scaleway`) | `6.14.19` | **6.14.18** ❌ écart |
+| Provider `aisia-foundation/aisia` | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-aisia-cluster` (`cluster/aisia`) | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-aisia-swarm` (`swarm/aisia`) | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-aws-aisia` (`aisia/aws`) | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-azure-aisia` (`aisia/azure`) | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-google-aisia` (`aisia/google`) | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-ovh-aisia` (`aisia/ovh`) | `6.14.20` | **6.14.19** ❌ écart |
+| Module `terraform-scaleway-aisia` (`aisia/scaleway`) | `6.14.20` | **6.14.19** ❌ écart |
 
 HCP privé (`app.terraform.io/AISIA`) : modules + provider publiés via `scripts/ops/publish_terraform.sh --apply` (mesuré hors ce tableau). Ne pas écrire « 100 % registry public » si Google public est absent.
 
