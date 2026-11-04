@@ -33,7 +33,7 @@ module "aisia_google_k8s" {
 
   org_id      = "acme"
   service_key = "C1"
-  image_tag   = "v6.14.26"
+  image_tag   = "v6.14.27"
   tier        = "saas"
 
   project_id   = "my-gcp-project"
@@ -54,7 +54,7 @@ module "aisia_google_k8s" {
 # 1. gcloud container clusters get-credentials aisia-acme \
 #      --region europe-west1 --project my-gcp-project
 # 2. provider "kubernetes" { config_path = "~/.kube/config" }
-# 3. module "aisia_app" { source = "aisia-foundation/cluster/aisia" version = "6.14.1" ... }
+# 3. module "aisia_app" { source = "aisia-foundation/cluster/aisia" version = "6.14.27" ... }
 ###############################################################################
 
 output "kubeconfig_command" {
